@@ -1,3 +1,4 @@
+from re import M
 import struct
 import gzip
 import numpy as np
@@ -29,9 +30,21 @@ def parse_mnist(image_filesname, label_filename):
                 labels of the examples.  Values should be of type np.int8 and
                 for MNIST will contain the values 0-9.
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    num_images = 60000
+    with gzip.open(image_filesname) as bytestream:
+        bytestream.read(16)
+        buf = bytestream.read(28 * 28 * num_images)
+        data = np.frombuffer(buf, dtype=np.uint8).astype(np.float32)
+        data = data.reshape(-1, 28 * 28)
+        data = (data / 255)
+        
+    with gzip.open(label_filename) as bytestream:
+        bytestream.read(8)
+        buf = bytestream.read(1 * num_images)
+        labels = np.frombuffer(buf, dtype=np.uint8)
+
+    return data, labels
+    ### END YOUR CODE
 
 
 def softmax_loss(Z, y_one_hot):
@@ -50,12 +63,20 @@ def softmax_loss(Z, y_one_hot):
     Returns:
         Average softmax loss over the sample. (ndl.Tensor[np.float32])
     """
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+    ### BEGIN YOUR CODE
+    m, n = Z.shape
+    # This code raises error in backward Reshape()
+    # logits = ndl.exp(Z)
+    # softmax = logits / ndl.summation(logits, axes=(1,)).reshape(shape=(m, 1))
+    # loss = -(y_one_hot * ndl.log(softmax)).sum() / ndl.Tensor([m])
+    # return loss
+    loss = ndl.log(ndl.exp(Z).sum(axes=(1, ))) - (Z * y_one_hot).sum(axes=(1,))
+    # return loss.sum() / ndl.Tensor([m])
+    return loss.sum() / m
+    ### END YOUR CODE
 
 
-def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
+def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
     """ Run a single epoch of SGD for a two-layer neural network defined by the
     weights W1 and W2 (with no bias terms):
         logits = ReLU(X * W1) * W1
@@ -79,9 +100,37 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
             W2: ndl.Tensor[np.float32]
     """
 
-    ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
-    ### END YOUR SOLUTION
+   ### BEGIN YOUR CODE
+    batches = np.array_split(X, len(X) // batch)
+    labels = np.array_split(y, len(y) // batch)
+    for batch_features, batch_labels in zip(batches, labels):
+        m = batch_features.shape[0]
+        num_classes = W2.shape[1]
+        one_hot = np.zeros((batch_labels.size, num_classes))
+        one_hot[np.arange(batch_labels.size), batch_labels] = 1
+
+        tensor_batch = ndl.Tensor(batch_features)
+        tensor_one_hot_labels = ndl.Tensor(one_hot)
+        
+        # forward pass
+        Z = tensor_batch @ W1
+        Z = ndl.relu(Z)
+        Z = Z @ W2
+        
+        batch_loss = softmax_loss(Z, tensor_one_hot_labels)
+        batch_loss.backward()
+        
+        W1_numpy = W1.numpy()
+        W2_numpy = W2.numpy()
+        
+        W1_numpy -= lr * W1.grad.numpy()
+        W2_numpy -= lr * W2.grad.numpy()
+        
+        W1 = ndl.Tensor(W1_numpy)
+        W2 = ndl.Tensor(W2_numpy)
+        
+    return W1, W2
+    ### END YOUR CODE
 
 
 ### CODE BELOW IS FOR ILLUSTRATION, YOU DO NOT NEED TO EDIT

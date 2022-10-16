@@ -166,7 +166,7 @@ class Reshape(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        return (out_grad.reshape(node.inputs[0].shape))
+        return (out_grad.reshape(node.inputs[0].shape), )
         ### END YOUR SOLUTION
 
 
@@ -282,7 +282,9 @@ class Log(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        node_input = node.inputs[0]
+        grad = Tensor([1]) / node_input
+        return (out_grad * grad, )
         ### END YOUR SOLUTION
 
 
@@ -298,7 +300,8 @@ class Exp(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        node_input = node.inputs[0]
+        return (out_grad * exp(node_input), )
         ### END YOUR SOLUTION
 
 
@@ -310,12 +313,14 @@ def exp(a):
 class ReLU(TensorOp):
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return array_api.maximum(a, 0.)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        arr = node.realize_cached_data()
+        arr = array_api.greater(arr, 0.).astype(array_api.float32)
+        return out_grad * Tensor(arr)
         ### END YOUR SOLUTION
 
 
